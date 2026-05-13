@@ -244,6 +244,7 @@ async function confirmPrompt(prompt: string): Promise<boolean> {
   return new Promise((resolve) => {
     process.stdin.setEncoding("utf-8");
     process.stdin.once("data", (data) => {
+      process.stdin.pause();
       const answer = data.toString().trim().toLowerCase();
       resolve(answer === "y" || answer === "yes");
     });
