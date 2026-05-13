@@ -1,6 +1,7 @@
 import { readFile, writeFile, access } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
+import pc from "picocolors";
 import {
   loadConfig,
   resolveChangelogPath,
@@ -175,7 +176,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
   );
 
   if (!opts.yes) {
-    const ok = await confirmPrompt(`write to ${changelogPath}? [y/N] `);
+    const displayPath = displayPathFor(changelogPath, loaded.projectRoot);
+    const ok = await confirmPrompt(pc.dim(`write to ${displayPath}? [y/N] `));
     if (!ok) {
       process.stderr.write("cliff-notes: aborted\n");
       return;
@@ -236,6 +238,12 @@ async function readMaybe(p: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function displayPathFor(absPath: string, projectRoot: string): string {
+  const rel = relative(projectRoot, absPath);
+  if (!rel || rel.startsWith("..") || isAbsolute(rel)) return absPath;
+  return rel;
 }
 
 async function confirmPrompt(prompt: string): Promise<boolean> {
