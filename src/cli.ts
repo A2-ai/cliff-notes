@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { Command } from "commander";
 import { runPipeline } from "./pipeline.ts";
 import { runExtract } from "./extract.ts";

@@ -16,7 +16,7 @@ One tool, multiple projects, multiple LLM providers (Anthropic / OpenAI / Bedroc
 
 ## Install
 
-cliff-notes is published as a raw source repo (no compiled binary yet). Two ways to use it:
+cliff-notes is published as a raw Bun source repo (no compiled binary yet). Two ways to use it:
 
 ```sh
 # Ad-hoc, no install

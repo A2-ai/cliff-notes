@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "description": "Controlled LLM changelog generator (git-cliff + structured LLM)",
   "bin": {
-    "cliff-notes": "./dist/cli.js"
+    "cliff-notes": "./src/cli.ts"
   },
   "files": [
-    "dist",
+    "src",
     "cliff.toml",
     "cliff-notes.example.toml",
     "README.md"
