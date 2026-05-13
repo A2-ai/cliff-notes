@@ -12,7 +12,6 @@ import {
   extractPRNumber,
   extractPRUrl,
   firstLine,
-  type CliffCommit,
   type CliffRelease,
 } from "./git-cliff.ts";
 import { enrichPRs } from "./github.ts";
@@ -20,6 +19,7 @@ import { makeLLMClient } from "./llm.ts";
 import type { EntryInput } from "./schemas.ts";
 import { assembleRender, formatDate, renderSection } from "./render.ts";
 import { mergeChangelog } from "./merge.ts";
+import type { Progress } from "./progress.ts";
 
 export interface PipelineOptions {
   configPath?: string;
@@ -31,19 +31,22 @@ export interface PipelineOptions {
   modelOverride?: string;
   yes: boolean;
   verbose?: boolean;
+  progress: Progress;
 }
 
 export async function runPipeline(opts: PipelineOptions): Promise<void> {
   if (!opts.tag && !opts.unreleased) {
     throw new Error(
       "specify --tag <version> or --unreleased. " +
-        "cliff-notes does not infer the next version number."
+        "cliff-notes does not infer the next version number.",
     );
   }
 
+  const { progress } = opts;
   const loaded = await loadConfig(opts.configPath);
   const cliffConfig = await chooseCliffConfig(loaded);
 
+  progress.step("git-cliff", "collecting commits");
   const releases = await runGitCliff({
     cwd: loaded.projectRoot,
     configPath: cliffConfig,
@@ -52,9 +55,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
   });
 
   if (opts.verbose) {
-    process.stderr.write(
-      `cliff-notes: git-cliff returned ${releases.length} release(s)\n`
-    );
+    process.stderr.write(`cliff-notes: git-cliff returned ${releases.length} release(s)\n`);
   }
 
   const target = pickTargetRelease(releases, opts);
@@ -67,13 +68,13 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
 
   const versionHeader = opts.unreleased
     ? "Unreleased"
-    : opts.tag ?? target.version ?? "Unreleased";
+    : (opts.tag ?? target.version ?? "Unreleased");
 
   const date = opts.unreleased
     ? null
     : formatDate(
         target.timestamp ? new Date(target.timestamp * 1000) : new Date(),
-        loaded.config.output.date_format
+        loaded.config.output.date_format,
       );
 
   // Build EntryInput[] preserving commit order from git-cliff.
@@ -85,13 +86,17 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
   });
 
   // Enrich PR data via gh — best-effort, errors per-PR don't fail the run.
+  if (prNumbers.length > 0) {
+    const uniqueCount = new Set(prNumbers).size;
+    progress.step("github", `enriching ${uniqueCount} PR${uniqueCount === 1 ? "" : "s"}`);
+  }
   const prMap = await enrichPRs(prNumbers, {
     cwd: loaded.projectRoot,
     verbose: opts.verbose,
   });
 
   const inputs: EntryInput[] = inputsRaw.map(({ commit, prNumber }) => {
-    const pr = prNumber !== null ? prMap.get(prNumber) ?? null : null;
+    const pr = prNumber !== null ? (prMap.get(prNumber) ?? null) : null;
     const subject = firstLine(commit.message);
     const subjectWithoutPRSuffix = subject.replace(/\s*\(#\d+\)\s*$/, "");
     return {
@@ -108,7 +113,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
 
   if (opts.verbose) {
     process.stderr.write(
-      `cliff-notes: rewriting ${inputs.length} entries (${prMap.size} PRs enriched)\n`
+      `cliff-notes: rewriting ${inputs.length} entries (${prMap.size} PRs enriched)\n`,
     );
   }
 
@@ -118,7 +123,9 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
     verbose: opts.verbose,
   });
 
+  progress.step("model", `rewriting ${inputs.length} entries · ${llm.provider}/${llm.model}`);
   const rewriteResp = await llm.rewriteEntries(inputs);
+  progress.step("model", "generating summary");
   const summaryResp = await llm.summarize(inputs, rewriteResp.entries);
 
   const renderInput = assembleRender({
@@ -138,7 +145,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
 
   if (opts.out) {
     await writeFile(opts.out, section);
-    process.stderr.write(`cliff-notes: wrote ${opts.out}\n`);
+    progress.done(`wrote ${opts.out}`);
     return;
   }
 
@@ -157,7 +164,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
       .split("\n")
       .slice(0, 10)
       .map((l) => "  " + l)
-      .join("\n") + "\n"
+      .join("\n") + "\n",
   );
 
   if (!opts.yes) {
@@ -168,20 +175,15 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
     }
   }
   await writeFile(changelogPath, merged);
-  process.stderr.write(`cliff-notes: wrote ${changelogPath}\n`);
+  progress.done(`wrote ${changelogPath}`);
 }
 
-function pickTargetRelease(
-  releases: CliffRelease[],
-  opts: PipelineOptions
-): CliffRelease | null {
+function pickTargetRelease(releases: CliffRelease[], opts: PipelineOptions): CliffRelease | null {
   if (releases.length === 0) return null;
   if (opts.unreleased) {
     // git-cliff --unreleased typically yields one release with version=null
     // (or the user-supplied --tag value if both are given).
-    return (
-      releases.find((r) => !r.version || r.version === opts.tag) ?? releases[0]!
-    );
+    return releases.find((r) => !r.version || r.version === opts.tag) ?? releases[0]!;
   }
   if (opts.tag) {
     return releases.find((r) => r.version === opts.tag) ?? releases[0]!;
@@ -205,10 +207,7 @@ async function chooseCliffConfig(loaded: LoadedConfig): Promise<string | undefin
   }
   // 3. Fall back to the cliff.toml bundled with cliff-notes
   const here = dirname(fileURLToPath(import.meta.url));
-  const candidates = [
-    resolve(here, "../cliff.toml"),
-    resolve(here, "../../cliff.toml"),
-  ];
+  const candidates = [resolve(here, "../cliff.toml"), resolve(here, "../../cliff.toml")];
   for (const c of candidates) {
     if (await exists(c)) return c;
   }

@@ -76,6 +76,7 @@ Each generated section ends with an HTML comment containing the raw git-cliff en
 <summary prose>
 
 ### Features
+
 - Added foo endpoint ([#123](https://github.com/...))
 
 <!-- cliff-notes:raw v1
@@ -105,7 +106,7 @@ git tag v1.2.3 && git push --follow-tags
 version: 2
 
 changelog:
-  disable: true   # turn off goreleaser's auto-changelog
+  disable: true # turn off goreleaser's auto-changelog
 
 before:
   hooks:
@@ -126,11 +127,11 @@ If you'd rather not pre-hook in goreleaser, do the extract inline in your releas
 
 ## Providers & prompt caching
 
-| Provider  | Config `name` | Default env var       | Notes |
-|-----------|---------------|-----------------------|-------|
-| Anthropic | `anthropic`   | `ANTHROPIC_API_KEY`   | System prompt is cached via `cacheControl: ephemeral` — re-runs during iteration only pay for the entries payload. |
-| OpenAI    | `openai`      | `OPENAI_API_KEY`      | OpenAI applies prompt caching automatically when the prefix exceeds 1024 tokens. |
-| Bedrock   | `bedrock`     | (AWS standard chain)  | Set `aws_profile` in `[provider]` and `AWS_REGION` in env. Cache control mirrors Anthropic. |
+| Provider  | Config `name` | Default env var      | Notes                                                                                                              |
+| --------- | ------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Anthropic | `anthropic`   | `ANTHROPIC_API_KEY`  | System prompt is cached via `cacheControl: ephemeral` — re-runs during iteration only pay for the entries payload. |
+| OpenAI    | `openai`      | `OPENAI_API_KEY`     | OpenAI applies prompt caching automatically when the prefix exceeds 1024 tokens.                                   |
+| Bedrock   | `bedrock`     | (AWS standard chain) | Set `aws_profile` in `[provider]` and `AWS_REGION` in env. Cache control mirrors Anthropic.                        |
 
 Override at the command line: `--provider openai --model gpt-4.1`.
 

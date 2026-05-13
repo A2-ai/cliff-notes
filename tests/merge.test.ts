@@ -59,16 +59,11 @@ describe("mergeChangelog", () => {
       unreleased: true,
     });
     expect(merged).toContain("## [Unreleased]");
-    expect(merged.indexOf("## [Unreleased]")).toBeLessThan(
-      merged.indexOf("## [v1.0.0]")
-    );
+    expect(merged.indexOf("## [Unreleased]")).toBeLessThan(merged.indexOf("## [v1.0.0]"));
   });
 
   test("--unreleased replaces existing Unreleased block, leaving releases intact", () => {
-    const existing =
-      `# Changelog\n\n` +
-      `## [Unreleased]\n\nold unreleased text\n\n` +
-      SECTION_A;
+    const existing = `# Changelog\n\n` + `## [Unreleased]\n\nold unreleased text\n\n` + SECTION_A;
     const merged = mergeChangelog({
       existing,
       newSection: `## [Unreleased]\n\nnew unreleased text\n\n`,

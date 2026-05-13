@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { runPipeline } from "./pipeline.ts";
 import { runExtract } from "./extract.ts";
+import { makeProgress } from "./progress.ts";
 
 const program = new Command();
 
@@ -9,7 +10,7 @@ program
   .name("cliff-notes")
   .description(
     "Controlled LLM changelog generator. Pairs git-cliff's deterministic " +
-      "grouping with schema-validated LLM prose."
+      "grouping with schema-validated LLM prose.",
   )
   .version("0.1.0");
 
@@ -21,13 +22,18 @@ program
   .option("--out <file>", "write rendered markdown to file instead of splicing into CHANGELOG.md")
   .option(
     "--extract <tag>",
-    "do not call LLM; extract an existing section from CHANGELOG.md (requires --out)"
+    "do not call LLM; extract an existing section from CHANGELOG.md (requires --out)",
   )
   .option("--provider <name>", "override provider from config (anthropic|openai|bedrock)")
   .option("--model <name>", "override model name from config")
   .option("--yes", "skip confirmation prompt before writing CHANGELOG.md")
+  .option("--quiet", "suppress stage progress lines on stderr")
   .option("--verbose", "log token counts, raw git-cliff JSON, intermediate LLM payloads")
   .action(async (opts) => {
+    const progress = makeProgress({
+      quiet: !!opts.quiet,
+      isTTY: !!process.stderr.isTTY,
+    });
     try {
       if (opts.extract) {
         await runExtract({
@@ -35,6 +41,7 @@ program
           configPath: opts.config,
           out: opts.out,
           verbose: !!opts.verbose,
+          progress,
         });
         return;
       }
@@ -48,6 +55,7 @@ program
         modelOverride: opts.model,
         yes: !!opts.yes,
         verbose: !!opts.verbose,
+        progress,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

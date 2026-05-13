@@ -36,6 +36,4 @@ sort_commits = "newest"
 
 # Strip conventional-commit prefix from the subject before it lands in the
 # context; the LLM rewriting layer will then prettify what's left.
-commit_preprocessors = [
-  { pattern = '^(\w+)(\(.+\))?!?: ', replace = "" },
-]
+commit_preprocessors = [{ pattern = '^(\w+)(\(.+\))?!?: ', replace = "" }]

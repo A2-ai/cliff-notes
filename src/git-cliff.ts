@@ -13,7 +13,7 @@ const CommitSchema = z
         z.object({
           text: z.string(),
           href: z.string(),
-        })
+        }),
       )
       .optional()
       .default([]),
@@ -66,8 +66,7 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
   if (code !== 0) {
     if (stderr.includes("not found") || stderr.includes("ENOENT")) {
       throw new Error(
-        "git-cliff binary not found. install it: " +
-          "https://git-cliff.org/docs/installation/"
+        "git-cliff binary not found. install it: " + "https://git-cliff.org/docs/installation/",
       );
     }
     throw new Error(`git-cliff exited ${code}: ${stderr.trim()}`);
@@ -80,7 +79,7 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
     throw new Error(
       `failed to parse git-cliff --context JSON: ${
         err instanceof Error ? err.message : String(err)
-      }`
+      }`,
     );
   }
 
@@ -89,7 +88,7 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
     throw new Error(
       `unexpected git-cliff --context shape: ${result.error.issues
         .map((i) => i.path.join(".") + ": " + i.message)
-        .join("; ")}`
+        .join("; ")}`,
     );
   }
   return result.data;
@@ -98,7 +97,7 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
 function execCapture(
   cmd: string,
   args: string[],
-  cwd: string
+  cwd: string,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve, reject) => {
     let child;

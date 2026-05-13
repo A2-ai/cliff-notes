@@ -4,7 +4,7 @@ import type { EntryInput, RewrittenEntry } from "../schemas.ts";
 export function buildSummaryPrompt(
   inputs: EntryInput[],
   rewritten: RewrittenEntry[],
-  cfg: Config
+  cfg: Config,
 ): string {
   const items = inputs.map((inp, i) => {
     const r = rewritten[i];

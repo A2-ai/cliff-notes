@@ -65,14 +65,12 @@ async function exists(p: string): Promise<boolean> {
 
 export async function loadConfig(explicitPath?: string): Promise<LoadedConfig> {
   const cwd = process.cwd();
-  const configPath = explicitPath
-    ? resolve(cwd, explicitPath)
-    : resolve(cwd, DEFAULT_CONFIG_NAME);
+  const configPath = explicitPath ? resolve(cwd, explicitPath) : resolve(cwd, DEFAULT_CONFIG_NAME);
 
   if (!(await exists(configPath))) {
     throw new Error(
       `config file not found at ${configPath}.\n` +
-        `create one — see cliff-notes.example.toml for the schema.`
+        `create one — see cliff-notes.example.toml for the schema.`,
     );
   }
 

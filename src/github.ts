@@ -13,7 +13,7 @@ const PR_CONCURRENCY = 5;
 
 export async function enrichPRs(
   prNumbers: number[],
-  opts: { cwd: string; verbose?: boolean } = { cwd: process.cwd() }
+  opts: { cwd: string; verbose?: boolean } = { cwd: process.cwd() },
 ): Promise<Map<number, PRInfo>> {
   const out = new Map<number, PRInfo>();
   if (prNumbers.length === 0) return out;
@@ -36,7 +36,7 @@ export async function enrichPRs(
           process.stderr.write(
             `cliff-notes: PR #${n} fetch failed (${
               err instanceof Error ? err.message : String(err)
-            }); skipping enrichment\n`
+            }); skipping enrichment\n`,
           );
         }
       }
@@ -49,13 +49,7 @@ export async function enrichPRs(
 }
 
 async function fetchPR(n: number, cwd: string): Promise<PRInfo | null> {
-  const args = [
-    "pr",
-    "view",
-    String(n),
-    "--json",
-    "number,title,body,url,author,labels",
-  ];
+  const args = ["pr", "view", String(n), "--json", "number,title,body,url,author,labels"];
   const { stdout, stderr, code } = await execCapture("gh", args, cwd);
   if (code !== 0) {
     throw new Error(stderr.trim() || `gh exited ${code}`);
@@ -85,7 +79,7 @@ async function ensureGhAvailable(): Promise<void> {
   if (code !== 0) {
     throw new Error(
       "gh CLI not found or not authenticated. install: https://cli.github.com/ " +
-        `(detail: ${stderr.trim() || "unknown"})`
+        `(detail: ${stderr.trim() || "unknown"})`,
     );
   }
   ghChecked = true;
@@ -94,7 +88,7 @@ async function ensureGhAvailable(): Promise<void> {
 function execCapture(
   cmd: string,
   args: string[],
-  cwd: string
+  cwd: string,
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((resolve, reject) => {
     let child;

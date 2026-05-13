@@ -10,16 +10,8 @@ describe("renderSection", () => {
       summary: "Adds foo and fixes bar.",
       groupOrder: ["Features", "Bug Fixes"],
       byGroup: new Map([
-        [
-          "Features",
-          [
-            { text: "Added foo endpoint", prNumber: 123, prUrl: "https://gh/pr/123" },
-          ],
-        ],
-        [
-          "Bug Fixes",
-          [{ text: "Fixed bar crash", prNumber: 124, prUrl: null }],
-        ],
+        ["Features", [{ text: "Added foo endpoint", prNumber: 123, prUrl: "https://gh/pr/123" }]],
+        ["Bug Fixes", [{ text: "Fixed bar crash", prNumber: 124, prUrl: null }]],
       ]),
       rawLines: [
         "- feat(api): add foo endpoint (PR #123)",
@@ -35,12 +27,7 @@ describe("renderSection", () => {
       date: null,
       summary: "stuff",
       groupOrder: ["Features"],
-      byGroup: new Map([
-        [
-          "Features",
-          [{ text: "x", prNumber: 1, prUrl: null }],
-        ],
-      ]),
+      byGroup: new Map([["Features", [{ text: "x", prNumber: 1, prUrl: null }]]]),
       rawLines: ["- feat: x (PR #1)"],
     });
     expect(out.startsWith("## [Unreleased]\n")).toBe(true);
@@ -53,9 +40,7 @@ describe("renderSection", () => {
       date: "2026-05-13",
       summary: "initial",
       groupOrder: ["Features"],
-      byGroup: new Map([
-        ["Features", [{ text: "first commit", prNumber: null, prUrl: null }]],
-      ]),
+      byGroup: new Map([["Features", [{ text: "first commit", prNumber: null, prUrl: null }]]]),
       rawLines: ["- feat: first commit"],
     });
     expect(out).toContain("- first commit\n");
@@ -110,10 +95,7 @@ describe("assembleRender", () => {
       groupForInput: (i) => inputs[i]!.type,
     });
     expect(render.groupOrder).toEqual(["Features", "Bug Fixes"]);
-    expect(render.byGroup.get("Features")?.map((e) => e.text)).toEqual([
-      "Added foo",
-      "Added baz",
-    ]);
+    expect(render.byGroup.get("Features")?.map((e) => e.text)).toEqual(["Added foo", "Added baz"]);
     expect(render.rawLines).toEqual([
       "- Features(api): add foo (PR #1)",
       "- Bug Fixes: fix bar (PR #2)",

@@ -13,11 +13,10 @@ import { buildRewritePrompt } from "./prompts/rewrite.ts";
 import { buildSummaryPrompt } from "./prompts/summary.ts";
 
 export interface LLMClient {
+  readonly provider: string;
+  readonly model: string;
   rewriteEntries(entries: EntryInput[]): Promise<RewriteResponse>;
-  summarize(
-    entries: EntryInput[],
-    rewritten: RewriteResponse["entries"]
-  ): Promise<SummaryResponse>;
+  summarize(entries: EntryInput[], rewritten: RewriteResponse["entries"]): Promise<SummaryResponse>;
 }
 
 export interface LLMOptions {
@@ -26,10 +25,7 @@ export interface LLMOptions {
   verbose?: boolean;
 }
 
-export async function makeLLMClient(
-  cfg: Config,
-  opts: LLMOptions = {}
-): Promise<LLMClient> {
+export async function makeLLMClient(cfg: Config, opts: LLMOptions = {}): Promise<LLMClient> {
   const providerName = opts.providerOverride ?? cfg.provider.name;
   const modelName = opts.modelOverride ?? cfg.provider.model;
 
@@ -37,6 +33,8 @@ export async function makeLLMClient(
   const system = buildSystemPrompt(cfg);
 
   return {
+    provider: providerName,
+    model: modelName,
     async rewriteEntries(entries) {
       const schema = buildRewriteSchema(entries);
       const result = await generateObject({
@@ -45,9 +43,7 @@ export async function makeLLMClient(
         messages: buildMessages(system, buildRewritePrompt(entries), isAnthropic),
       });
       if (opts.verbose) {
-        process.stderr.write(
-          `cliff-notes: rewrite tokens=${JSON.stringify(result.usage)}\n`
-        );
+        process.stderr.write(`cliff-notes: rewrite tokens=${JSON.stringify(result.usage)}\n`);
       }
       return result.object;
     },
@@ -55,16 +51,10 @@ export async function makeLLMClient(
       const result = await generateObject({
         model,
         schema: SummaryResponseSchema,
-        messages: buildMessages(
-          system,
-          buildSummaryPrompt(entries, rewritten, cfg),
-          isAnthropic
-        ),
+        messages: buildMessages(system, buildSummaryPrompt(entries, rewritten, cfg), isAnthropic),
       });
       if (opts.verbose) {
-        process.stderr.write(
-          `cliff-notes: summary tokens=${JSON.stringify(result.usage)}\n`
-        );
+        process.stderr.write(`cliff-notes: summary tokens=${JSON.stringify(result.usage)}\n`);
       }
       return result.object;
     },
@@ -74,7 +64,7 @@ export async function makeLLMClient(
 function buildMessages(
   system: string,
   user: string,
-  isAnthropic: boolean
+  isAnthropic: boolean,
 ): Parameters<typeof generateObject>[0]["messages"] {
   const systemMsg: Record<string, unknown> = {
     role: "system",
@@ -93,7 +83,7 @@ function buildMessages(
 async function loadProvider(
   name: string,
   modelName: string,
-  cfg: Config
+  cfg: Config,
 ): Promise<{ model: LanguageModel; isAnthropic: boolean }> {
   if (name === "anthropic") {
     const envVar = cfg.provider.api_key_env ?? "ANTHROPIC_API_KEY";
@@ -116,7 +106,7 @@ async function loadProvider(
       process.env.AWS_PROFILE = cfg.provider.aws_profile;
     }
     const credentialProvider = fromNodeProviderChain(
-      cfg.provider.aws_profile ? { profile: cfg.provider.aws_profile } : {}
+      cfg.provider.aws_profile ? { profile: cfg.provider.aws_profile } : {},
     );
     const bedrock = createAmazonBedrock({
       region: process.env.AWS_REGION ?? "us-east-1",

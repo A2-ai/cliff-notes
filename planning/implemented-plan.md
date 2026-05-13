@@ -25,16 +25,16 @@ End state: `CHANGELOG.md` becomes a structured, machine-parseable file. Consumer
 
 ### Stack
 
-| Concern | Choice | Why |
-|---|---|---|
-| Runtime | **bun** | Org default; user preference; `bunx` for zero-install cross-project use |
-| LLM SDK | **[Vercel AI SDK](https://sdk.vercel.ai/) (`ai`)** | Multi-provider in one API; `generateObject({ schema })` returns zod-validated structured output; Anthropic prompt caching via `providerOptions` |
-| Providers | `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/amazon-bedrock` | Selected per-project via TOML config |
-| Data layer | **`git-cliff`** (external binary) | Deterministic conventional-commit parsing, tag detection, range math, PR-link generation, JSON `--context` output |
-| PR enrichment | **`gh` CLI** | `gh pr view <n> --json title,body,labels,url,author` for real PR context |
-| Config | **TOML** via `smol-toml` + zod | Multiline prompt strings work cleanly; predictable |
-| CLI args | **`commander`** | Standard, well-typed |
-| Markdown merge | Hand-rolled splice on `## [vX.Y.Z]` headings | Section boundaries are deterministic; avoids parser dependency |
+| Concern        | Choice                                                          | Why                                                                                                                                             |
+| -------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime        | **bun**                                                         | Org default; user preference; `bunx` for zero-install cross-project use                                                                         |
+| LLM SDK        | **[Vercel AI SDK](https://sdk.vercel.ai/) (`ai`)**              | Multi-provider in one API; `generateObject({ schema })` returns zod-validated structured output; Anthropic prompt caching via `providerOptions` |
+| Providers      | `@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/amazon-bedrock` | Selected per-project via TOML config                                                                                                            |
+| Data layer     | **`git-cliff`** (external binary)                               | Deterministic conventional-commit parsing, tag detection, range math, PR-link generation, JSON `--context` output                               |
+| PR enrichment  | **`gh` CLI**                                                    | `gh pr view <n> --json title,body,labels,url,author` for real PR context                                                                        |
+| Config         | **TOML** via `smol-toml` + zod                                  | Multiline prompt strings work cleanly; predictable                                                                                              |
+| CLI args       | **`commander`**                                                 | Standard, well-typed                                                                                                                            |
+| Markdown merge | Hand-rolled splice on `## [vX.Y.Z]` headings                    | Section boundaries are deterministic; avoids parser dependency                                                                                  |
 
 ### Architecture
 
@@ -95,17 +95,17 @@ Cache-control on the system prompt + project voice/audience block (long, stable)
 
 ### Operating modes
 
-| Flag | Behavior |
-|---|---|
-| (default) | Generate for range since last tag → **prepend** new `## [<next-tag>]` section to `CHANGELOG.md` |
-| `--tag vX.Y.Z` | Force the version header |
-| `--unreleased` | Use `## [Unreleased]` header; replaces any existing `[Unreleased]` block |
-| `--dry-run` | Print to stdout, **never touch disk** |
-| `--out <file>` | Write to file instead of splicing into CHANGELOG.md |
-| `--extract <tag> --out <file>` | No LLM call — extract an existing section from CHANGELOG.md (for goreleaser to consume) |
-| `--provider <name>` | Override config provider |
-| `--model <name>` | Override config model |
-| `--verbose` | Show token counts, raw git-cliff JSON, intermediate LLM payloads |
+| Flag                           | Behavior                                                                                        |
+| ------------------------------ | ----------------------------------------------------------------------------------------------- |
+| (default)                      | Generate for range since last tag → **prepend** new `## [<next-tag>]` section to `CHANGELOG.md` |
+| `--tag vX.Y.Z`                 | Force the version header                                                                        |
+| `--unreleased`                 | Use `## [Unreleased]` header; replaces any existing `[Unreleased]` block                        |
+| `--dry-run`                    | Print to stdout, **never touch disk**                                                           |
+| `--out <file>`                 | Write to file instead of splicing into CHANGELOG.md                                             |
+| `--extract <tag> --out <file>` | No LLM call — extract an existing section from CHANGELOG.md (for goreleaser to consume)         |
+| `--provider <name>`            | Override config provider                                                                        |
+| `--model <name>`               | Override config model                                                                           |
+| `--verbose`                    | Show token counts, raw git-cliff JSON, intermediate LLM payloads                                |
 
 `--dry-run` is the **default expectation** during iteration. Tool always prints a preview to stderr before touching disk; `--yes` skips confirm.
 
@@ -119,6 +119,7 @@ Each generated section ends with an HTML comment containing the raw git-cliff en
 <summary prose>
 
 ### Features
+
 - Add foo bar baz ([#123](...))
 
 <!-- cliff-notes:raw v1
@@ -236,9 +237,11 @@ Tool ships a default `cliff.toml` baseline so first-time projects can run with j
 ## Verification
 
 1. **Smoke test against spackle-ui**:
+
    ```
    cd ~/Projects/a2-ai/spackle-ui && bunx ~/Projects/a2-ai/cliff-notes --unreleased --dry-run
    ```
+
    Expect: rendered markdown to stdout, summary + entries for commits since last tag, no disk write.
 
 2. **Schema-violation handling**: Mock LLM returns wrong-length array / missing `pr_number`. Pipeline fails with clear error, **never** writes partial CHANGELOG.

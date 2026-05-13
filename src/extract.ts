@@ -1,19 +1,24 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { loadConfig, resolveChangelogPath } from "./config.ts";
+import type { Progress } from "./progress.ts";
 
 export interface ExtractOptions {
   tag: string;
   configPath?: string;
   out?: string;
   verbose?: boolean;
+  progress: Progress;
 }
 
 export async function runExtract(opts: ExtractOptions): Promise<void> {
   if (!opts.out) {
     throw new Error("--extract requires --out <file>");
   }
+  const { progress } = opts;
   const loaded = await loadConfig(opts.configPath);
   const changelogPath = resolveChangelogPath(loaded);
+
+  progress.step("extract", `reading ${changelogPath}`);
   let contents: string;
   try {
     contents = await readFile(changelogPath, "utf-8");
@@ -21,17 +26,16 @@ export async function runExtract(opts: ExtractOptions): Promise<void> {
     throw new Error(`changelog not found at ${changelogPath}`);
   }
 
+  progress.step("extract", `slicing section for ${opts.tag}`);
   const section = extractSection(contents, opts.tag);
   if (!section) {
     throw new Error(
       `tag "${opts.tag}" not found in ${changelogPath}. ` +
-        `expected a heading like \`## [${opts.tag}]\`.`
+        `expected a heading like \`## [${opts.tag}]\`.`,
     );
   }
   await writeFile(opts.out, section);
-  if (opts.verbose) {
-    process.stderr.write(`cliff-notes: wrote ${section.length} bytes to ${opts.out}\n`);
-  }
+  progress.done(`wrote ${opts.out} (${section.length} bytes)`);
 }
 
 export function extractSection(changelog: string, tag: string): string | null {
