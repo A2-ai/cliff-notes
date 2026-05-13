@@ -1,0 +1,42 @@
+# cliff-notes.example.toml
+#
+# Drop this at the root of a consumer project and rename to `cliff-notes.toml`.
+# See README.md for full docs.
+
+[provider]
+# anthropic | openai | bedrock
+name = "anthropic"
+model = "claude-sonnet-4-6"
+# Bedrock-only: AWS profile to use (mirrored into AWS_PROFILE for this run).
+# aws_profile = "ai"
+# Override the env var read for the API key. Defaults per-provider:
+#   anthropic -> ANTHROPIC_API_KEY
+#   openai    -> OPENAI_API_KEY
+#   bedrock   -> uses AWS_* env vars
+# api_key_env = "ANTHROPIC_API_KEY"
+
+[project]
+name = "my-project"
+audience = "internal-devs"
+voice = "concise, technical, no marketing fluff"
+
+[prompt]
+# Optional. Appended to the baseline system prompt — use to teach the LLM
+# project-specific terminology, audience nuance, or "always say X" rules.
+# system_extra = """
+# This project ships an R package. Phrase entries in terms users will see
+# when they `library(...)`. Don't reference Rust internals.
+# """
+#
+# Optional. Style guidance for the release summary only.
+# summary_style = "Lead with the user-facing change, mention rollout caveats."
+
+[git_cliff]
+# Path (relative to this config file) to a git-cliff config. If omitted,
+# cliff-notes uses ./cliff.toml from the project root if present, else its
+# own bundled default.
+# config = "cliff.toml"
+
+[output]
+changelog_file = "CHANGELOG.md"
+date_format = "%Y-%m-%d"

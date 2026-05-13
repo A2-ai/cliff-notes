@@ -1,0 +1,19 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`renderSection renders header, summary, grouped entries, and audit block 1`] = `
+"## [v1.2.3] - 2026-05-13
+
+Adds foo and fixes bar.
+
+### Features
+- Added foo endpoint ([#123](https://gh/pr/123))
+
+### Bug Fixes
+- Fixed bar crash (#124)
+
+<!-- cliff-notes:raw v1
+- feat(api): add foo endpoint (PR #123)
+- fix(core): bar crash on startup (PR #124)
+-->
+"
+`;
