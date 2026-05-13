@@ -15,6 +15,7 @@ import {
   type CliffRelease,
 } from "./git-cliff.ts";
 import { enrichPRs } from "./github.ts";
+import { getOriginGitHubSlug, buildCommitUrl } from "./git-remote.ts";
 import { makeLLMClient } from "./llm.ts";
 import type { EntryInput } from "./schemas.ts";
 import { assembleRender, formatDate, renderSection } from "./render.ts";
@@ -45,6 +46,7 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
   const { progress } = opts;
   const loaded = await loadConfig(opts.configPath);
   const cliffConfig = await chooseCliffConfig(loaded);
+  const repoSlug = await getOriginGitHubSlug(loaded.projectRoot);
 
   progress.step("git-cliff", "collecting commits");
   const releases = await runGitCliff({
@@ -99,6 +101,9 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
     const pr = prNumber !== null ? (prMap.get(prNumber) ?? null) : null;
     const subject = firstLine(commit.message);
     const subjectWithoutPRSuffix = subject.replace(/\s*\(#\d+\)\s*$/, "");
+    const commitSha = commit.id || null;
+    const commitUrl =
+      prNumber === null && commitSha && repoSlug ? buildCommitUrl(repoSlug, commitSha) : null;
     return {
       pr_number: prNumber,
       raw_subject: subjectWithoutPRSuffix,
@@ -108,6 +113,8 @@ export async function runPipeline(opts: PipelineOptions): Promise<void> {
       scope: commit.scope ?? null,
       author: pr?.author ?? commit.author?.name ?? null,
       url: pr?.url ?? extractPRUrl(commit),
+      commit_sha: commitSha,
+      commit_url: commitUrl,
     };
   });
 

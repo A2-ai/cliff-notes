@@ -10,6 +10,8 @@ export interface EntryInput {
   scope: string | null;
   author: string | null;
   url: string | null;
+  commit_sha: string | null;
+  commit_url: string | null;
 }
 
 // What we expect back from the LLM for each entry.

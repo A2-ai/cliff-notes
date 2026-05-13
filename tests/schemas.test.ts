@@ -11,6 +11,8 @@ function input(pr: number | null): EntryInput {
     scope: null,
     author: null,
     url: null,
+    commit_sha: null,
+    commit_url: null,
   };
 }
 

@@ -10,8 +10,30 @@ describe("renderSection", () => {
       summary: "Adds foo and fixes bar.",
       groupOrder: ["Features", "Bug Fixes"],
       byGroup: new Map([
-        ["Features", [{ text: "Added foo endpoint", prNumber: 123, prUrl: "https://gh/pr/123" }]],
-        ["Bug Fixes", [{ text: "Fixed bar crash", prNumber: 124, prUrl: null }]],
+        [
+          "Features",
+          [
+            {
+              text: "Added foo endpoint",
+              prNumber: 123,
+              prUrl: "https://gh/pr/123",
+              commitSha: null,
+              commitUrl: null,
+            },
+          ],
+        ],
+        [
+          "Bug Fixes",
+          [
+            {
+              text: "Fixed bar crash",
+              prNumber: 124,
+              prUrl: null,
+              commitSha: null,
+              commitUrl: null,
+            },
+          ],
+        ],
       ]),
       rawLines: [
         "- feat(api): add foo endpoint (PR #123)",
@@ -27,11 +49,66 @@ describe("renderSection", () => {
       date: null,
       summary: "stuff",
       groupOrder: ["Features"],
-      byGroup: new Map([["Features", [{ text: "x", prNumber: 1, prUrl: null }]]]),
+      byGroup: new Map([
+        ["Features", [{ text: "x", prNumber: 1, prUrl: null, commitSha: null, commitUrl: null }]],
+      ]),
       rawLines: ["- feat: x (PR #1)"],
     });
     expect(out.startsWith("## [Unreleased]\n")).toBe(true);
     expect(out).not.toContain(" - 20");
+  });
+
+  test("non-PR entry with commit url renders short-SHA link", () => {
+    const out = renderSection({
+      versionHeader: "v0.1.0",
+      date: "2026-05-13",
+      summary: "s",
+      groupOrder: ["Features"],
+      byGroup: new Map([
+        [
+          "Features",
+          [
+            {
+              text: "direct push",
+              prNumber: null,
+              prUrl: null,
+              commitSha: "abc1234deadbeef",
+              commitUrl: "https://github.com/o/r/commit/abc1234deadbeef",
+            },
+          ],
+        ],
+      ]),
+      rawLines: ["- feat: direct push"],
+    });
+    expect(out).toContain(
+      "- direct push ([abc1234](https://github.com/o/r/commit/abc1234deadbeef))",
+    );
+  });
+
+  test("PR-linked entry ignores commit fallback (no redundant suffix)", () => {
+    const out = renderSection({
+      versionHeader: "v0.1.0",
+      date: "2026-05-13",
+      summary: "s",
+      groupOrder: ["Features"],
+      byGroup: new Map([
+        [
+          "Features",
+          [
+            {
+              text: "via PR",
+              prNumber: 7,
+              prUrl: "https://gh/pr/7",
+              commitSha: "abc1234deadbeef",
+              commitUrl: "https://github.com/o/r/commit/abc1234deadbeef",
+            },
+          ],
+        ],
+      ]),
+      rawLines: ["- feat: via PR (PR #7)"],
+    });
+    expect(out).toContain("- via PR ([#7](https://gh/pr/7))");
+    expect(out).not.toContain("abc1234");
   });
 
   test("entry without a PR number renders no suffix", () => {
@@ -40,7 +117,20 @@ describe("renderSection", () => {
       date: "2026-05-13",
       summary: "initial",
       groupOrder: ["Features"],
-      byGroup: new Map([["Features", [{ text: "first commit", prNumber: null, prUrl: null }]]]),
+      byGroup: new Map([
+        [
+          "Features",
+          [
+            {
+              text: "first commit",
+              prNumber: null,
+              prUrl: null,
+              commitSha: null,
+              commitUrl: null,
+            },
+          ],
+        ],
+      ]),
       rawLines: ["- feat: first commit"],
     });
     expect(out).toContain("- first commit\n");
@@ -60,6 +150,8 @@ describe("assembleRender", () => {
         scope: "api",
         author: null,
         url: "https://gh/pr/1",
+        commit_sha: null,
+        commit_url: null,
       },
       {
         pr_number: 2,
@@ -70,6 +162,8 @@ describe("assembleRender", () => {
         scope: null,
         author: null,
         url: null,
+        commit_sha: null,
+        commit_url: null,
       },
       {
         pr_number: 3,
@@ -80,6 +174,8 @@ describe("assembleRender", () => {
         scope: null,
         author: null,
         url: null,
+        commit_sha: null,
+        commit_url: null,
       },
     ];
     const render = assembleRender({

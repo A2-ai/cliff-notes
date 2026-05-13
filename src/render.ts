@@ -1,4 +1,5 @@
 import type { EntryInput, RewrittenEntry } from "./schemas.ts";
+import { shortSha } from "./git-remote.ts";
 
 export interface RenderInput {
   versionHeader: string; // e.g. "v1.2.3" or "Unreleased"
@@ -17,6 +18,8 @@ export interface RenderedEntry {
   text: string;
   prNumber: number | null;
   prUrl: string | null;
+  commitSha: string | null;
+  commitUrl: string | null;
 }
 
 export function renderSection(input: RenderInput): string {
@@ -34,7 +37,7 @@ export function renderSection(input: RenderInput): string {
     if (!entries || entries.length === 0) continue;
     lines.push(`### ${group}`);
     for (const e of entries) {
-      lines.push(`- ${e.text}${renderPRSuffix(e)}`);
+      lines.push(`- ${e.text}${renderLinkSuffix(e)}`);
     }
     lines.push("");
   }
@@ -49,10 +52,15 @@ export function renderSection(input: RenderInput): string {
   return lines.join("\n");
 }
 
-function renderPRSuffix(e: RenderedEntry): string {
-  if (e.prNumber === null) return "";
-  if (e.prUrl) return ` ([#${e.prNumber}](${e.prUrl}))`;
-  return ` (#${e.prNumber})`;
+function renderLinkSuffix(e: RenderedEntry): string {
+  if (e.prNumber !== null) {
+    if (e.prUrl) return ` ([#${e.prNumber}](${e.prUrl}))`;
+    return ` (#${e.prNumber})`;
+  }
+  if (e.commitSha && e.commitUrl) {
+    return ` ([${shortSha(e.commitSha)}](${e.commitUrl}))`;
+  }
+  return "";
 }
 
 // Build a RenderInput from the validated LLM output + git-cliff context.
@@ -81,6 +89,8 @@ export function assembleRender(args: {
       text: re.rewritten,
       prNumber: inp.pr_number,
       prUrl: inp.url,
+      commitSha: inp.commit_sha,
+      commitUrl: inp.commit_url,
     });
     const scopeSuffix = inp.scope ? `(${inp.scope})` : "";
     const prSuffix = inp.pr_number !== null ? ` (PR #${inp.pr_number})` : "";
