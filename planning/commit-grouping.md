@@ -9,7 +9,7 @@ cliff-notes today renders **one bullet per commit** in a release. That's fine on
 - **Direct-to-main related commits**: a feature landed across multiple non-adjacent commits without a PR (e.g. "add user model", "wire user model into auth", "fix typo in user model"). No PR signal binds them; no deterministic rule reliably groups them.
 - **Plumbing noise**: dependency bumps, lint/format fixes, comment-only edits, internal renames, test-only churn. Mechanically valid commits, but rarely interesting in a release-notes context.
 
-The first two are mechanical: same PR number → group. The third is semantic — only an LLM with subjects, bodies, and *what files each commit touched* can judge it. The fourth is editorial: only an LLM can sensibly decide "this commit shouldn't appear in the changelog."
+The first two are mechanical: same PR number → group. The third is semantic — only an LLM with subjects, bodies, and _what files each commit touched_ can judge it. The fourth is editorial: only an LLM can sensibly decide "this commit shouldn't appear in the changelog."
 
 The goal is a **curation pass** that handles all four — grouping, primary-selection, and omission — while preserving cliff-notes' core invariants:
 
@@ -24,9 +24,9 @@ The goal is a **curation pass** that handles all four — grouping, primary-sele
 1. **Free PR prefilter (no LLM call).** Resolve a PR number per commit, then group commits sharing a PR number. Sources of PR number, in order:
    - `commit.remote.pr_number` from git-cliff's GitHub enrichment (most authoritative).
    - `extractPRNumber(commit)` from src/git-cliff.ts:129 (subject `(#N)` / links).
-   
+
    This step handles merge-commit and rebase-merge PRs uniformly. For squash-merge repos every commit has a unique PR number — the prefilter is a no-op (no commit shares a PR with any other).
-   
+
 2. **Gate.** If fewer than 2 commits remain in the residual (commits not part of any multi-member PR group), skip the LLM curation call entirely. Most well-disciplined squash-merge releases exit here.
 
 3. **LLM curation pass on the residual.** Ask the model to classify each residual commit into exactly one of three dispositions: group with N others, stand alone, or omit (with reason). Strict partition schema, type-homogeneity guard, content-hash cached for reproducibility.
@@ -375,6 +375,7 @@ If `opts.showCuration` (new CLI flag, default false) is set: emit the proposed g
 ### `src/render.ts` (extend audit block)
 
 `assembleRender` now takes `omitted: OmittedCommit[]` in addition to `inputs`/`rewritten`. Audit block emits:
+
 - One rawLine per original commit in `inputs`, with a group anchor when grouped, tagged with curation source.
 - A trailing section listing every omitted commit with its reason.
 
