@@ -1,5 +1,10 @@
 import { describe, test, expect } from "bun:test";
-import { buildRewriteSchema, type EntryInput } from "../src/schemas.ts";
+import {
+  buildCurationSchema,
+  buildRewriteSchema,
+  type CurationInput,
+  type EntryInput,
+} from "../src/schemas.ts";
 
 function input(pr: number | null): EntryInput {
   return {
@@ -13,6 +18,36 @@ function input(pr: number | null): EntryInput {
     url: null,
     commit_sha: null,
     commit_url: null,
+    members: [
+      {
+        sha: "abc1234",
+        subject: "x",
+        body: "",
+        type: "Features",
+        scope: null,
+        files: [],
+        additions: 0,
+        deletions: 0,
+      },
+    ],
+    curated_by: "solo",
+  };
+}
+
+function curationInput(index: number, type = "Features"): CurationInput {
+  return {
+    index,
+    sha: `sha${index}`,
+    subject: `subject ${index}`,
+    body: "",
+    type,
+    scope: null,
+    files: [],
+    additions: 0,
+    deletions: 0,
+    author: null,
+    pr_number: null,
+    pr_url: null,
   };
 }
 
@@ -64,5 +99,105 @@ describe("buildRewriteSchema", () => {
       entries: [{ pr_number: 1, rewritten: "a", highlight: false }],
     });
     expect(bad.success).toBe(false);
+  });
+});
+
+describe("buildCurationSchema", () => {
+  const residual = [curationInput(0), curationInput(1), curationInput(2)];
+  const opts = {
+    maxPerGroup: 3,
+    maxIndexGap: 2,
+    requireSameType: true,
+    allowOmissions: true,
+  };
+
+  test("accepts solo-only partition", () => {
+    const schema = buildCurationSchema(residual, opts);
+    const result = schema.safeParse({
+      groups: [
+        { member_indices: [0], primary_index: 0, reason: "solo" },
+        { member_indices: [1], primary_index: 1, reason: "solo" },
+        { member_indices: [2], primary_index: 2, reason: "solo" },
+      ],
+      omitted: [],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("accepts groups plus omissions covering all indices", () => {
+    const schema = buildCurationSchema(residual, opts);
+    const result = schema.safeParse({
+      groups: [{ member_indices: [0, 1], primary_index: 0, reason: "related" }],
+      omitted: [{ index: 2, reason: "lint-only cleanup" }],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  test("rejects missing, duplicate, and out-of-range indices", () => {
+    const schema = buildCurationSchema(residual, opts);
+    expect(
+      schema.safeParse({
+        groups: [{ member_indices: [0, 1], primary_index: 0, reason: "related" }],
+        omitted: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        groups: [
+          { member_indices: [0, 1], primary_index: 0, reason: "related" },
+          { member_indices: [1, 2], primary_index: 1, reason: "related" },
+        ],
+        omitted: [],
+      }).success,
+    ).toBe(false);
+    expect(
+      schema.safeParse({
+        groups: [{ member_indices: [0, 1, 3], primary_index: 0, reason: "related" }],
+        omitted: [],
+      }).success,
+    ).toBe(false);
+  });
+
+  test("rejects invalid primary, mixed types, large spans, oversized groups, and disabled omissions", () => {
+    expect(
+      buildCurationSchema(residual, opts).safeParse({
+        groups: [{ member_indices: [0, 1], primary_index: 2, reason: "related" }],
+        omitted: [{ index: 2, reason: "lint" }],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      buildCurationSchema([curationInput(0, "Features"), curationInput(1, "Chores")], {
+        ...opts,
+        maxIndexGap: 1,
+      }).safeParse({
+        groups: [{ member_indices: [0, 1], primary_index: 0, reason: "related" }],
+        omitted: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      buildCurationSchema(residual, { ...opts, maxIndexGap: 1 }).safeParse({
+        groups: [{ member_indices: [0, 2], primary_index: 0, reason: "related" }],
+        omitted: [{ index: 1, reason: "lint" }],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      buildCurationSchema(residual, { ...opts, maxPerGroup: 2 }).safeParse({
+        groups: [{ member_indices: [0, 1, 2], primary_index: 0, reason: "related" }],
+        omitted: [],
+      }).success,
+    ).toBe(false);
+
+    expect(
+      buildCurationSchema(residual, { ...opts, allowOmissions: false }).safeParse({
+        groups: [
+          { member_indices: [0, 1], primary_index: 0, reason: "related" },
+          { member_indices: [2], primary_index: 2, reason: "solo" },
+        ],
+        omitted: [{ index: 2, reason: "lint" }],
+      }).success,
+    ).toBe(false);
   });
 });

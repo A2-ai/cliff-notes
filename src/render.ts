@@ -1,4 +1,5 @@
 import type { EntryInput, RewrittenEntry } from "./schemas.ts";
+import type { OmittedCommit } from "./curation.ts";
 import { shortSha } from "./git-remote.ts";
 
 export interface RenderInput {
@@ -70,6 +71,7 @@ export function assembleRender(args: {
   summary: string;
   inputs: EntryInput[];
   rewritten: RewrittenEntry[];
+  omitted?: OmittedCommit[];
   groupForInput: (i: number) => string;
 }): RenderInput {
   const groupOrder: string[] = [];
@@ -92,9 +94,30 @@ export function assembleRender(args: {
       commitSha: inp.commit_sha,
       commitUrl: inp.commit_url,
     });
-    const scopeSuffix = inp.scope ? `(${inp.scope})` : "";
-    const prSuffix = inp.pr_number !== null ? ` (PR #${inp.pr_number})` : "";
-    rawLines.push(`- ${inp.type}${scopeSuffix}: ${inp.raw_subject}${prSuffix}`);
+    if (inp.members.length > 1) {
+      const tag =
+        inp.curated_by === "pr"
+          ? `grouped by PR #${inp.pr_number}`
+          : `grouped by model${inp.llm_reason ? `: ${inp.llm_reason}` : ""}`;
+      rawLines.push(`- group (${tag}): ${inp.raw_subject}`);
+      for (const m of inp.members) {
+        const scopeSuffix = m.scope ? `(${m.scope})` : "";
+        rawLines.push(`  - ${shortSha(m.sha)} ${m.type ?? "?"}${scopeSuffix}: ${m.subject}`);
+      }
+    } else {
+      const member = inp.members[0];
+      const scopeSuffix = inp.scope ? `(${inp.scope})` : "";
+      const prSuffix = inp.pr_number !== null ? ` (PR #${inp.pr_number})` : "";
+      const shaPrefix = member?.sha ? `${shortSha(member.sha)} ` : "";
+      rawLines.push(`- ${shaPrefix}${inp.type}${scopeSuffix}: ${inp.raw_subject}${prSuffix}`);
+    }
+  }
+
+  for (const omitted of args.omitted ?? []) {
+    const scopeSuffix = omitted.member.scope ? `(${omitted.member.scope})` : "";
+    rawLines.push(
+      `- omitted (${omitted.reason}): ${shortSha(omitted.member.sha)} ${omitted.member.type ?? "?"}${scopeSuffix}: ${omitted.member.subject}`,
+    );
   }
 
   return {

@@ -17,8 +17,8 @@ model = "claude-sonnet-4-6"
 
 [project]
 name = "my-project"
-audience = "internal-devs"
-voice = "concise, technical, no marketing fluff"
+audience = "end-users of the application"
+voice = "clear, user-focused, concise, no marketing fluff"
 
 [prompt]
 # Optional. Appended to the baseline system prompt — use to teach the LLM
@@ -36,6 +36,25 @@ voice = "concise, technical, no marketing fluff"
 # cliff-notes uses ./cliff.toml from the project root if present, else its
 # own bundled default.
 # config = "cliff.toml"
+
+[curation]
+# strategy = "auto"        # default. PR prefilter + LLM curation on residual.
+# "by-pr-only" runs only deterministic PR grouping.
+# "off" keeps one changelog bullet per commit.
+# omit_plumbing = true     # LLM may suppress changes that are not meaningful
+# to the configured project.audience. Audience examples are guidance, not an
+# exhaustive list: external-user/operator notes can omit test-only changes and
+# developer-only churn, while maintainer notes can keep those when useful.
+# Omissions remain in the audit block.
+# min_group_size = 2
+# max_per_group = 5
+# max_index_gap = 15       # LLM cannot group commits more than 15 positions apart.
+# require_same_type = true # reject LLM groups that mix conventional commit groups.
+# cache = true             # content-hash cache for deterministic curation reruns.
+
+[github]
+# enabled = true           # reuse gh/GITHUB_TOKEN credentials for git-cliff PR enrichment.
+# repo = "owner/name"      # optional; default autodetected from env, gh, or origin.
 
 [output]
 changelog_file = "CHANGELOG.md"

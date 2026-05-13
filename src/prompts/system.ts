@@ -17,6 +17,7 @@ export function buildSystemPrompt(cfg: Config): string {
     "- Each rewritten entry must be one sentence under 280 characters.",
     "- pr_number in each output entry MUST equal the corresponding input pr_number — copy it verbatim.",
     "- Output the entries in the SAME ORDER as the input.",
+    "- When member_commits is present, the entry represents a multi-commit change. Write one sentence that captures the net change. Use pr_title/pr_body as primary signal and member_commits for supporting context. Do not enumerate individual commits.",
     extra ? `\nProject-specific guidance:\n${extra}` : "",
   ]
     .filter(Boolean)

@@ -10,6 +10,14 @@ export function buildRewritePrompt(entries: EntryInput[]): string {
     pr_title: e.pr_title,
     pr_body: truncate(e.pr_body, 1500),
     author: e.author,
+    member_commits:
+      e.members.length > 1
+        ? e.members.map((m) => ({
+            subject: m.subject,
+            type: m.type,
+            files: m.files,
+          }))
+        : undefined,
   }));
   return [
     "Rewrite the following changelog entries. Return an object with an `entries` array of the same length, in the same order.",

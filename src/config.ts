@@ -12,8 +12,8 @@ const ProviderSchema = z.object({
 
 const ProjectSchema = z.object({
   name: z.string().min(1),
-  audience: z.string().default("internal-devs"),
-  voice: z.string().default("concise, technical, no marketing fluff"),
+  audience: z.string().default("end-users of the application"),
+  voice: z.string().default("clear, user-focused, concise, no marketing fluff"),
 });
 
 const PromptSchema = z
@@ -36,12 +36,33 @@ const OutputSchema = z
   })
   .default({});
 
+const CurationSchema = z
+  .object({
+    strategy: z.enum(["off", "by-pr-only", "auto"]).default("auto"),
+    omit_plumbing: z.boolean().default(true),
+    min_group_size: z.number().int().min(1).default(2),
+    max_per_group: z.number().int().min(2).default(5),
+    max_index_gap: z.number().int().min(1).default(15),
+    require_same_type: z.boolean().default(true),
+    cache: z.boolean().default(true),
+  })
+  .default({});
+
+const GitHubSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    repo: z.string().optional(),
+  })
+  .default({});
+
 export const ConfigSchema = z.object({
   provider: ProviderSchema,
   project: ProjectSchema,
   prompt: PromptSchema,
   git_cliff: GitCliffSchema,
   output: OutputSchema,
+  curation: CurationSchema,
+  github: GitHubSchema,
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

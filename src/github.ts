@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process";
+import { execCapture } from "./exec.ts";
+import { parseGitHubRemote } from "./git-remote.ts";
 
 export interface PRInfo {
   number: number;
@@ -18,7 +19,16 @@ export async function enrichPRs(
   const out = new Map<number, PRInfo>();
   if (prNumbers.length === 0) return out;
 
-  await ensureGhAvailable();
+  try {
+    await ensureGhAvailable();
+  } catch (err) {
+    if (opts.verbose) {
+      process.stderr.write(
+        `cliff-notes: gh unavailable (${err instanceof Error ? err.message : String(err)}); skipping PR enrichment\n`,
+      );
+    }
+    return out;
+  }
 
   const unique = [...new Set(prNumbers)];
   let cursor = 0;
@@ -46,6 +56,64 @@ export async function enrichPRs(
   const workerCount = Math.min(PR_CONCURRENCY, unique.length);
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return out;
+}
+
+export async function resolveGitHubToken(opts: {
+  cwd: string;
+  verbose?: boolean;
+}): Promise<string | null> {
+  const fromEnv = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  if (fromEnv?.trim()) return fromEnv.trim();
+
+  try {
+    const { stdout, code, stderr } = await execCapture("gh", ["auth", "token"], opts.cwd);
+    if (code === 0 && stdout.trim()) return stdout.trim();
+    if (opts.verbose) {
+      process.stderr.write(
+        `cliff-notes: gh auth token unavailable (${stderr.trim() || `exit ${code}`})\n`,
+      );
+    }
+  } catch (err) {
+    if (opts.verbose) {
+      process.stderr.write(
+        `cliff-notes: gh auth token failed (${err instanceof Error ? err.message : String(err)})\n`,
+      );
+    }
+  }
+  return null;
+}
+
+export async function resolveGitHubRepo(opts: {
+  cwd: string;
+  configOverride?: string;
+  verbose?: boolean;
+}): Promise<string | null> {
+  if (opts.configOverride?.trim()) return opts.configOverride.trim();
+  if (process.env.GITHUB_REPOSITORY?.trim()) return process.env.GITHUB_REPOSITORY.trim();
+
+  try {
+    const { stdout, code } = await execCapture(
+      "gh",
+      ["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"],
+      opts.cwd,
+    );
+    if (code === 0 && stdout.trim()) return stdout.trim();
+  } catch (err) {
+    if (opts.verbose) {
+      process.stderr.write(
+        `cliff-notes: gh repo view failed (${err instanceof Error ? err.message : String(err)})\n`,
+      );
+    }
+  }
+
+  try {
+    const { stdout, code } = await execCapture("git", ["remote", "get-url", "origin"], opts.cwd);
+    if (code !== 0) return null;
+    const slug = parseGitHubRemote(stdout.trim());
+    return slug ? `${slug.owner}/${slug.repo}` : null;
+  } catch {
+    return null;
+  }
 }
 
 async function fetchPR(n: number, cwd: string): Promise<PRInfo | null> {
@@ -83,34 +151,4 @@ async function ensureGhAvailable(): Promise<void> {
     );
   }
   ghChecked = true;
-}
-
-function execCapture(
-  cmd: string,
-  args: string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve, reject) => {
-    let child;
-    try {
-      child = spawn(cmd, args, { cwd });
-    } catch (err) {
-      reject(err);
-      return;
-    }
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d.toString()));
-    child.stderr.on("data", (d) => (stderr += d.toString()));
-    child.on("error", (err) => {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        resolve({ stdout: "", stderr: `ENOENT: ${cmd} not found`, code: 127 });
-      } else {
-        reject(err);
-      }
-    });
-    child.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? 0 });
-    });
-  });
 }

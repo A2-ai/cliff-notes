@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
 import { z } from "zod";
+import { execCapture } from "./exec.ts";
 
 const CommitSchema = z
   .object({
@@ -25,6 +25,15 @@ const CommitSchema = z
       })
       .optional(),
     conventional: z.boolean().optional(),
+    remote: z
+      .object({
+        pr_number: z.number().int().nullable().optional(),
+        pr_title: z.string().nullable().optional(),
+        pr_labels: z.array(z.string()).optional().default([]),
+        username: z.string().nullable().optional(),
+      })
+      .passthrough()
+      .optional(),
   })
   .passthrough();
 
@@ -48,6 +57,8 @@ export interface CliffOptions {
   configPath?: string;
   unreleased: boolean;
   tag?: string;
+  githubToken?: string | null;
+  githubRepo?: string | null;
 }
 
 export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
@@ -60,6 +71,9 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
   }
   if (opts.tag) {
     args.push("--tag", opts.tag);
+  }
+  if (opts.githubToken && opts.githubRepo) {
+    args.push("--github-token", opts.githubToken, "--github-repo", opts.githubRepo);
   }
 
   const { stdout, stderr, code } = await execCapture("git-cliff", args, opts.cwd);
@@ -94,39 +108,10 @@ export async function runGitCliff(opts: CliffOptions): Promise<CliffRelease[]> {
   return result.data;
 }
 
-function execCapture(
-  cmd: string,
-  args: string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve, reject) => {
-    let child;
-    try {
-      child = spawn(cmd, args, { cwd });
-    } catch (err) {
-      reject(err);
-      return;
-    }
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d.toString()));
-    child.stderr.on("data", (d) => (stderr += d.toString()));
-    child.on("error", (err) => {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        resolve({ stdout: "", stderr: `ENOENT: ${cmd} not found`, code: 127 });
-      } else {
-        reject(err);
-      }
-    });
-    child.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? 0 });
-    });
-  });
-}
-
 // Pluck the PR number from links (first link with text like "#123") or fallback
 // to scraping the commit message footer for "(#123)".
 export function extractPRNumber(commit: CliffCommit): number | null {
+  if (typeof commit.remote?.pr_number === "number") return commit.remote.pr_number;
   for (const link of commit.links ?? []) {
     const m = link.text.match(/^#(\d+)$/);
     if (m && m[1]) return parseInt(m[1], 10);

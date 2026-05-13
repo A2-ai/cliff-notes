@@ -1,6 +1,24 @@
 import { describe, test, expect } from "bun:test";
 import { renderSection, assembleRender, formatDate } from "../src/render.ts";
-import type { EntryInput } from "../src/schemas.ts";
+import type { EntryInput, EntryMember } from "../src/schemas.ts";
+
+function member(
+  sha: string,
+  subject: string,
+  type = "Features",
+  scope: string | null = null,
+): EntryMember {
+  return {
+    sha,
+    subject,
+    body: "",
+    type,
+    scope,
+    files: [],
+    additions: 0,
+    deletions: 0,
+  };
+}
 
 describe("renderSection", () => {
   test("renders header, summary, grouped entries, and audit block", () => {
@@ -152,6 +170,8 @@ describe("assembleRender", () => {
         url: "https://gh/pr/1",
         commit_sha: null,
         commit_url: null,
+        members: [member("abc1234", "add foo", "Features", "api")],
+        curated_by: "solo",
       },
       {
         pr_number: 2,
@@ -164,6 +184,8 @@ describe("assembleRender", () => {
         url: null,
         commit_sha: null,
         commit_url: null,
+        members: [member("def5678", "fix bar", "Bug Fixes")],
+        curated_by: "solo",
       },
       {
         pr_number: 3,
@@ -176,6 +198,8 @@ describe("assembleRender", () => {
         url: null,
         commit_sha: null,
         commit_url: null,
+        members: [member("fed4321", "add baz", "Features")],
+        curated_by: "solo",
       },
     ];
     const render = assembleRender({
@@ -193,9 +217,57 @@ describe("assembleRender", () => {
     expect(render.groupOrder).toEqual(["Features", "Bug Fixes"]);
     expect(render.byGroup.get("Features")?.map((e) => e.text)).toEqual(["Added foo", "Added baz"]);
     expect(render.rawLines).toEqual([
-      "- Features(api): add foo (PR #1)",
-      "- Bug Fixes: fix bar (PR #2)",
-      "- Features: add baz (PR #3)",
+      "- abc1234 Features(api): add foo (PR #1)",
+      "- def5678 Bug Fixes: fix bar (PR #2)",
+      "- fed4321 Features: add baz (PR #3)",
+    ]);
+  });
+
+  test("records grouped members and omitted commits in audit block", () => {
+    const inputs: EntryInput[] = [
+      {
+        pr_number: 42,
+        raw_subject: "add grouped feature",
+        pr_title: null,
+        pr_body: null,
+        type: "Features",
+        scope: null,
+        author: null,
+        url: "https://gh/pr/42",
+        commit_sha: null,
+        commit_url: null,
+        members: [
+          member("aaa1111", "add model", "Features"),
+          member("bbb2222", "wire model", "Features"),
+        ],
+        curated_by: "pr",
+      },
+    ];
+    const render = assembleRender({
+      versionHeader: "v1.0.0",
+      date: "2026-05-13",
+      summary: "s",
+      inputs,
+      rewritten: [{ pr_number: 42, rewritten: "Added grouped feature", highlight: false }],
+      omitted: [
+        {
+          member: {
+            ...member("ccc3333", "fix lint", "Chores"),
+            author: null,
+            prNumber: null,
+            prUrl: null,
+            releaseIndex: 2,
+          },
+          reason: "lint-only cleanup",
+        },
+      ],
+      groupForInput: (i) => inputs[i]!.type,
+    });
+    expect(render.rawLines).toEqual([
+      "- group (grouped by PR #42): add grouped feature",
+      "  - aaa1111 Features: add model",
+      "  - bbb2222 Features: wire model",
+      "- omitted (lint-only cleanup): ccc3333 Chores: fix lint",
     ]);
   });
 });
