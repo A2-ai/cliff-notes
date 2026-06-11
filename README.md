@@ -49,6 +49,16 @@ By default, cliff-notes runs a curation pass before rewriting entries. Commits s
 
 GitHub PR enrichment reuses existing credentials: `GITHUB_TOKEN`, `GH_TOKEN`, or `gh auth token`. In GitHub Actions, `GITHUB_TOKEN` and `GITHUB_REPOSITORY` are enough for git-cliff PR enrichment; locally, an authenticated `gh` CLI is sufficient. Set `[github] enabled = false` to skip token/repo resolution.
 
+### Recommended repo merge settings
+
+cliff-notes always fetches PR data from the GitHub API when `gh` is reachable (git-cliff enrichment for per-commit PR numbers, plus `gh pr view` for title/body/url/author/labels). The API is the preferred source whenever available. The repo's merge method only changes how much PR metadata survives in **local git** as a fallback when the API is unreachable (offline CI, `[github] enabled = false`):
+
+- **Squash and merge**, with the repo setting _"Default commit message → Pull request title and description"_, is the friendliest. The squash commit subject becomes the PR title + `(#N)` and the body becomes the PR description, so cliff-notes recovers title, body, and PR number from local git alone — and the curation pass short-circuits (one commit per PR, nothing to group). Best results even fully offline.
+- **Merge commit** preserves the individual commits and puts the PR title in the merge commit body, but the constituent commits need API enrichment (or the rev-list fallback) to learn their PR number.
+- **Rebase and merge** appends `(#N)` to each commit but drops the PR title/body from git entirely, so it leans hardest on API enrichment for any prose richer than the raw commit subjects.
+
+This is guidance for graceful degradation, not a reason to skip fetching — when the API is reachable it's always used.
+
 ## Use
 
 ```sh
