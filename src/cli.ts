@@ -29,6 +29,7 @@ program
   .option("--yes", "skip confirmation prompt before writing CHANGELOG.md")
   .option("--quiet", "suppress stage progress lines on stderr")
   .option("--verbose", "log token counts, raw git-cliff JSON, intermediate LLM payloads")
+  .option("--show-curation", "print commit grouping and omissions before rewrite")
   .action(async (opts) => {
     const progress = makeProgress({
       quiet: !!opts.quiet,
@@ -55,6 +56,7 @@ program
         modelOverride: opts.model,
         yes: !!opts.yes,
         verbose: !!opts.verbose,
+        showCuration: !!opts.showCuration,
         progress,
       });
     } catch (err) {

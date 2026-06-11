@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execCapture } from "./exec.ts";
 
 export interface RepoSlug {
   owner: string;
@@ -45,34 +45,4 @@ export function buildCommitUrl(slug: RepoSlug, sha: string): string {
 
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
-}
-
-function execCapture(
-  cmd: string,
-  args: string[],
-  cwd: string,
-): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve, reject) => {
-    let child;
-    try {
-      child = spawn(cmd, args, { cwd });
-    } catch (err) {
-      reject(err);
-      return;
-    }
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (d) => (stdout += d.toString()));
-    child.stderr.on("data", (d) => (stderr += d.toString()));
-    child.on("error", (err) => {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        resolve({ stdout: "", stderr: `ENOENT: ${cmd} not found`, code: 127 });
-      } else {
-        reject(err);
-      }
-    });
-    child.on("close", (code) => {
-      resolve({ stdout, stderr, code: code ?? 0 });
-    });
-  });
 }

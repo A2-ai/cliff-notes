@@ -20,19 +20,22 @@ This change adds a short-SHA fallback link (e.g. `([abc1234](https://github.com/
 Single-purpose module so `pipeline.ts` stays tidy and the regex is unit-testable.
 
 ```ts
-export interface RepoSlug { owner: string; repo: string; }
+export interface RepoSlug {
+  owner: string;
+  repo: string;
+}
 
-export async function getOriginGitHubSlug(cwd: string): Promise<RepoSlug | null>
+export async function getOriginGitHubSlug(cwd: string): Promise<RepoSlug | null>;
 // spawns `git remote get-url origin`; returns null on any failure
 // (no origin, non-github.com host, parse miss).
 
-export function parseGitHubRemote(url: string): RepoSlug | null
+export function parseGitHubRemote(url: string): RepoSlug | null;
 // pure; handles the three URL forms above. Exported for tests.
 
-export function buildCommitUrl(slug: RepoSlug, sha: string): string
+export function buildCommitUrl(slug: RepoSlug, sha: string): string;
 // returns `https://github.com/${owner}/${repo}/commit/${sha}`.
 
-export function shortSha(sha: string): string
+export function shortSha(sha: string): string;
 // returns sha.slice(0, 7).
 ```
 
@@ -46,6 +49,7 @@ Reuse the `execCapture` pattern already in `src/git-cliff.ts:97` and `src/github
 ### 3. Extend `EntryInput`: `src/schemas.ts`
 
 Add two optional fields to the existing schema (`src/schemas.ts:4-12`):
+
 - `commit_sha: string | null`
 - `commit_url: string | null`
 

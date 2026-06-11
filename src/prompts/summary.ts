@@ -1,6 +1,14 @@
 import type { Config } from "../config.ts";
 import type { EntryInput, RewrittenEntry } from "../schemas.ts";
 
+export const SUMMARY_PROMPT_GUIDANCE = [
+  "Write a release summary in 1–2 short sentences, plain prose, no bullet list, no heading.",
+  "Lead with the user-visible outcome or operational impact, not implementation details or changelog mechanics.",
+  "Use highlighted entries as the main signal. Mention low-level details only when they change user behavior, compatibility, deployment, or operations.",
+  "Prefer one coherent release theme over enumerating entries.",
+  "Do not include PR numbers or links.",
+] as const;
+
 export function buildSummaryPrompt(
   inputs: EntryInput[],
   rewritten: RewrittenEntry[],
@@ -17,9 +25,7 @@ export function buildSummaryPrompt(
   });
   const style = cfg.prompt.summary_style?.trim();
   return [
-    "Write a release summary in 2–4 sentences, plain prose, no bullet list, no heading.",
-    "Lead with what changed for the audience, not the changelog mechanics.",
-    "Do not include PR numbers or links.",
+    ...SUMMARY_PROMPT_GUIDANCE,
     style ? `Style guidance: ${style}` : "",
     "",
     "Entries (JSON):",
