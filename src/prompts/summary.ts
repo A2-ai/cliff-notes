@@ -2,9 +2,10 @@ import type { Config } from "../config.ts";
 import type { EntryInput, RewrittenEntry } from "../schemas.ts";
 
 export const SUMMARY_PROMPT_GUIDANCE = [
-  "Write a release summary in 1–2 short sentences, plain prose, no bullet list, no heading.",
+  "Write a brief release summary of at most a couple sentences, plain prose, no bullet list, no heading.",
+  "Capture the version at a high level. This is not meant to be exhaustive — convey the gist, not every change.",
   "Lead with the user-visible outcome or operational impact, not implementation details or changelog mechanics.",
-  "Use highlighted entries as the main signal. Mention low-level details only when they change user behavior, compatibility, deployment, or operations.",
+  "Use highlighted entries as the main signal, and skip lower-level details unless they change user behavior, compatibility, deployment, or operations.",
   "Prefer one coherent release theme over enumerating entries.",
   "Do not include PR numbers or links.",
 ] as const;
