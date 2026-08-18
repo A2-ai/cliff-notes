@@ -2,10 +2,16 @@ pre-commit:
   parallel: true
   jobs:
     - name: oxfmt
-      glob: "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc}"
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc,md,mdx}"
       run: bunx oxfmt {staged_files}
       stage_fixed: true
 
     - name: oxlint
       glob: "*.{js,jsx,ts,tsx,mjs,cjs,mts,cts}"
       run: bunx oxlint {staged_files}
+
+    - name: tsc
+      glob: "*.{ts,tsx,mts,cts}"
+      # tsc has no per-file mode, so this checks the whole project rather than
+      # {staged_files} whenever any TypeScript file is staged.
+      run: bun run typecheck

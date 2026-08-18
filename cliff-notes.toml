@@ -1,0 +1,61 @@
+# cliff-notes.example.toml
+#
+# Drop this at the root of a consumer project and rename to `cliff-notes.toml`.
+# See README.md for full docs.
+
+[provider]
+# anthropic | openai | bedrock
+name = "bedrock"
+model = "us.anthropic.claude-sonnet-4-6"
+# Bedrock-only: AWS profile to use (mirrored into AWS_PROFILE for this run).
+# aws_profile = "ai"
+# Override the env var read for the API key. Defaults per-provider:
+#   anthropic -> ANTHROPIC_API_KEY
+#   openai    -> OPENAI_API_KEY
+#   bedrock   -> uses AWS_* env vars
+# api_key_env = "ANTHROPIC_API_KEY"
+
+[project]
+name = "my-project"
+audience = "end-users of the application"
+voice = "clear, user-focused, concise, no marketing fluff"
+
+[prompt]
+# Optional. Appended to the baseline system prompt — use to teach the LLM
+# project-specific terminology, audience nuance, or "always say X" rules.
+# system_extra = """
+# This project ships an R package. Phrase entries in terms users will see
+# when they `library(...)`. Don't reference Rust internals.
+# """
+#
+# Optional. Style guidance for the release summary only.
+# summary_style = "Lead with the user-facing change, mention rollout caveats."
+
+[git_cliff]
+# Path (relative to this config file) to a git-cliff config. If omitted,
+# cliff-notes uses ./cliff.toml from the project root if present, else its
+# own bundled default.
+# config = "cliff.toml"
+
+[curation]
+# strategy = "auto"        # default. PR prefilter + LLM curation on residual.
+# "by-pr-only" runs only deterministic PR grouping.
+# "off" keeps one changelog bullet per commit.
+# omit_plumbing = true     # LLM may suppress changes that are not meaningful
+# to the configured project.audience. Audience examples are guidance, not an
+# exhaustive list: external-user/operator notes can omit test-only changes and
+# developer-only churn, while maintainer notes can keep those when useful.
+# Omissions remain in the audit block.
+# min_group_size = 2
+# max_per_group = 5
+# max_index_gap = 15       # LLM cannot group commits more than 15 positions apart.
+# require_same_type = true # reject LLM groups that mix conventional commit groups.
+# cache = true             # content-hash cache for deterministic curation reruns.
+
+[github]
+# enabled = true           # reuse gh/GITHUB_TOKEN credentials for git-cliff PR enrichment.
+# repo = "owner/name"      # optional; default autodetected from env, gh, or origin.
+
+[output]
+changelog_file = "CHANGELOG.md"
+date_format = "%Y-%m-%d"

@@ -10,8 +10,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-and-format:
-    name: Lint and format
+  static-analysis:
+    name: Static analysis
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +29,9 @@ jobs:
 
       - name: Lint (oxlint)
         run: bun run lint
+
+      - name: Typecheck (tsc)
+        run: bun run typecheck
 
   test:
     name: Test
