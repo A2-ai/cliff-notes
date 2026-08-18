@@ -1,5 +1,5 @@
 import { generateObject } from "ai";
-import type { LanguageModel } from "ai";
+import type { LanguageModel, SystemModelMessage } from "ai";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -45,8 +45,12 @@ export async function makeLLMClient(cfg: Config, opts: LLMOptions = {}): Promise
   const providerName = opts.providerOverride ?? cfg.provider.name;
   const modelName = opts.modelOverride ?? cfg.provider.model;
 
-  const { model, isAnthropic } = await loadProvider(providerName, modelName, cfg);
-  const system = buildSystemPrompt(cfg);
+  const { model, cacheOptions } = await loadProvider(providerName, modelName, cfg);
+  const instructions: SystemModelMessage = {
+    role: "system",
+    content: buildSystemPrompt(cfg),
+    ...(cacheOptions ? { providerOptions: cacheOptions } : {}),
+  };
 
   return {
     provider: providerName,
@@ -56,7 +60,8 @@ export async function makeLLMClient(cfg: Config, opts: LLMOptions = {}): Promise
       const result = await generateObject({
         model,
         schema,
-        messages: buildMessages(system, buildRewritePrompt(entries), isAnthropic),
+        instructions,
+        messages: [{ role: "user", content: buildRewritePrompt(entries) }],
       });
       if (opts.verbose) {
         process.stderr.write(`cliff-notes: rewrite tokens=${JSON.stringify(result.usage)}\n`);
@@ -67,7 +72,8 @@ export async function makeLLMClient(cfg: Config, opts: LLMOptions = {}): Promise
       const result = await generateObject({
         model,
         schema: SummaryResponseSchema,
-        messages: buildMessages(system, buildSummaryPrompt(entries, rewritten, cfg), isAnthropic),
+        instructions,
+        messages: [{ role: "user", content: buildSummaryPrompt(entries, rewritten, cfg) }],
       });
       if (opts.verbose) {
         process.stderr.write(`cliff-notes: summary tokens=${JSON.stringify(result.usage)}\n`);
@@ -87,14 +93,16 @@ export async function makeLLMClient(cfg: Config, opts: LLMOptions = {}): Promise
         model,
         schema,
         temperature: 0,
-        messages: buildMessages(
-          system,
-          buildCurationPrompt(residual, {
-            allowOmissions: curateOpts.allowOmissions,
-            audience,
-          }),
-          isAnthropic,
-        ),
+        instructions,
+        messages: [
+          {
+            role: "user",
+            content: buildCurationPrompt(residual, {
+              allowOmissions: curateOpts.allowOmissions,
+              audience,
+            }),
+          },
+        ],
       });
       if (opts.verbose) {
         process.stderr.write(`cliff-notes: curation tokens=${JSON.stringify(result.usage)}\n`);
@@ -152,43 +160,27 @@ async function writeCurationCache(
   }
 }
 
-function buildMessages(
-  system: string,
-  user: string,
-  isAnthropic: boolean,
-): Parameters<typeof generateObject>[0]["messages"] {
-  const systemMsg: Record<string, unknown> = {
-    role: "system",
-    content: system,
-  };
-  if (isAnthropic) {
-    systemMsg.providerOptions = {
-      anthropic: { cacheControl: { type: "ephemeral" } },
-    };
-  }
-  return [systemMsg, { role: "user", content: user }] as Parameters<
-    typeof generateObject
-  >[0]["messages"];
-}
-
 async function loadProvider(
   name: string,
   modelName: string,
   cfg: Config,
-): Promise<{ model: LanguageModel; isAnthropic: boolean }> {
+): Promise<{ model: LanguageModel; cacheOptions?: SystemModelMessage["providerOptions"] }> {
   if (name === "anthropic") {
     const envVar = cfg.provider.api_key_env ?? "ANTHROPIC_API_KEY";
     requireEnv(envVar);
     const { createAnthropic } = await import("@ai-sdk/anthropic");
     const anthropic = createAnthropic({ apiKey: process.env[envVar] });
-    return { model: anthropic(modelName), isAnthropic: true };
+    return {
+      model: anthropic(modelName),
+      cacheOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+    };
   }
   if (name === "openai") {
     const envVar = cfg.provider.api_key_env ?? "OPENAI_API_KEY";
     requireEnv(envVar);
     const { createOpenAI } = await import("@ai-sdk/openai");
     const openai = createOpenAI({ apiKey: process.env[envVar] });
-    return { model: openai(modelName), isAnthropic: false };
+    return { model: openai(modelName) };
   }
   if (name === "bedrock") {
     const { createAmazonBedrock } = await import("@ai-sdk/amazon-bedrock");
@@ -210,7 +202,12 @@ async function loadProvider(
         };
       },
     });
-    return { model: bedrock(modelName), isAnthropic: true };
+    // Bedrock ignores the `anthropic` provider namespace; prompt caching is opted into
+    // with its own cachePoint marker even for Claude models.
+    return {
+      model: bedrock(modelName),
+      cacheOptions: { bedrock: { cachePoint: { type: "default" } } },
+    };
   }
   throw new Error(`unknown provider: ${name}`);
 }
