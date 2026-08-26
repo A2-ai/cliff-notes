@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import { asSchema } from "ai";
 import {
   buildCurationSchema,
   buildRewriteSchema,
@@ -199,5 +200,17 @@ describe("buildCurationSchema", () => {
         omitted: [{ index: 2, reason: "lint" }],
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("rewrite JSON schema", () => {
+  test("carries the length guidance as a field description the model can see", async () => {
+    const jsonSchema = (await asSchema(buildRewriteSchema([input(1)])).jsonSchema) as {
+      properties: { entries: { items: { properties: { rewritten: Record<string, unknown> } } } };
+    };
+    const rewritten = jsonSchema.properties.entries.items.properties.rewritten;
+    expect(rewritten.maxLength).toBe(400);
+    expect(String(rewritten.description)).toContain("at most 400 characters");
+    expect(String(rewritten.description)).toContain("two or three specific changes");
   });
 });

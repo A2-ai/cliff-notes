@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { runPipeline } from "./pipeline.ts";
 import { runExtract } from "./extract.ts";
 import { makeProgress } from "./progress.ts";
+import { formatError } from "./errors.ts";
 
 const program = new Command();
 
@@ -60,8 +61,7 @@ program
         progress,
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(`cliff-notes: ${msg}\n`);
+      process.stderr.write(`cliff-notes: ${formatError(err, { verbose: !!opts.verbose })}\n`);
       process.exit(1);
     }
   });
