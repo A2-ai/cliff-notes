@@ -38,7 +38,13 @@ export interface CurationInput extends EntryMember {
 // What we expect back from the LLM for each entry.
 const RewrittenEntrySchema = z.object({
   pr_number: z.number().int().nullable(),
-  rewritten: z.string().min(1).max(280),
+  rewritten: z
+    .string()
+    .min(1)
+    .max(400)
+    .describe(
+      "One sentence, at most 400 characters (about 50 words). State the purpose of the change and name at most two or three specific changes; do not enumerate every item from the PR body.",
+    ),
   highlight: z.boolean().optional().default(false),
 });
 
