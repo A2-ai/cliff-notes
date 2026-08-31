@@ -25,11 +25,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^5.0.57",
-    "@ai-sdk/anthropic": "^4.0.39",
-    "@ai-sdk/openai": "^4.0.42",
-    "@aws-sdk/credential-providers": "^3.1111.0",
-    "ai": "^7.0.67",
+    "@ai-sdk/amazon-bedrock": "^5.0.66",
+    "@ai-sdk/anthropic": "^4.0.44",
+    "@ai-sdk/openai": "^4.0.50",
+    "@aws-sdk/credential-providers": "^3.1120.0",
+    "ai": "^7.0.83",
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
     "smol-toml": "^1.8.0",
@@ -39,8 +39,8 @@
     "@types/bun": "latest",
     "@types/node": "^22.0.0",
     "lefthook": "^2.1.10",
-    "oxfmt": "^0.63.0",
-    "oxlint": "^1.78.0",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
     "typescript": "^5.5.0"
   }
 }
