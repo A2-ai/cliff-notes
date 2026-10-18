@@ -33,7 +33,7 @@
     "commander": "^12.1.0",
     "picocolors": "^1.1.1",
     "smol-toml": "^1.8.0",
-    "zod": "^3.25.76"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
